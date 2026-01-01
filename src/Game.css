@@ -1,0 +1,16 @@
+.tile {
+    /* This ensures it stays square regardless of width */
+    /* aspect-ratio: 1 / 1; */
+    border: 2px solid #D3D6DA;
+    width: 62px;
+    height: 62px;
+    margin: 4px;
+
+    /* centering letter (temporary) */
+    text-align: center;
+    line-height: 62px;
+}
+
+.row {
+    display: flex;
+}
