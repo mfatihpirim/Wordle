@@ -1,36 +1,47 @@
-
-import './Game.css'
+import { useEffect, useRef } from 'react';
+import './Game.css';
 import Grid from './Grid';
 import Keyboard from './Keyboard';
-import { useEffect } from 'react'
-import { useGameStore } from './useGameStore'
+import { useBoundStore } from './store/useBoundStore';
 
 export default function Game() {
-    
-    // LOAD GAME ON MOUNT
-    const loadGame = useGameStore((state) => state.loadGame)
-    
-    // The loadGame action function never changes, so this effectively ensures the code only runs once (on page load).
-    useEffect(() => {loadGame()}, [loadGame])
+    const { initialize, startNewGame } = useBoundStore.use.actions();
+    const hasInitialized = useBoundStore.use.hasInitialized();
+    const activeSessionId = useBoundStore.use.activeSessionId();
+
+    // Create the guard. 
+    // This value is 'sticky'—it stays the same even if the component re-renders.
+    // Changing .current does NOT trigger a re-render, which is what we want here.
+    // isStarting is now the object { current: false }
+    const isStarting = useRef(false);
+
+    useEffect(() => {
+        // 1. Wake up the store
+        initialize();
+    }, [initialize]);
+
+
+    useEffect(() => {
+        console.log(`has initialized: ${hasInitialized}, activesession ID: ${activeSessionId}`)
+        // - The store has finished rehydrating (hasInitialized)
+        // - There is no current active game (!activeSessionId)
+        // - We haven't ALREADY triggered a start in this mount cycle (!isStarting.current)
+        if (hasInitialized && !activeSessionId && !isStarting.current) {
+            console.log("New game generating")
+
+            isStarting.current = true
+            startNewGame(false); // false = not a featured/daily word
+        }
+    }, [hasInitialized, activeSessionId, startNewGame]);
+
+    if (!hasInitialized || !activeSessionId) {
+        return <div className="loading">Generating Word...</div>;
+    }
 
     return (
-    <>  
-        <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                height: '75vh',
-                justifyContent: 'center',
-                alignItems: 'center',
-            }}>
-        <h1>Wordle</h1>
-        <Grid/>
-        <br/>
-        <Keyboard />
-        </div>
-
-    </>
-
-    )
+        <main className="game-container">
+            <Grid />
+            <Keyboard />
+        </main>
+    );
 }
-
-

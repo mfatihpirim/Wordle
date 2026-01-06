@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { useGameStore } from './useGameStore';
+import { useBoundStore } from './store/useBoundStore'
+import { getKeyboardStatusMap } from './store/gameSlice'
 
 const KEYS: string[][] = [
   ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
@@ -10,14 +11,12 @@ const KEYS: string[][] = [
 export default function Keyboard() {
 
     // STATE DATA IN STORE
-    const status = useGameStore.use.status()
+    const status = useBoundStore.use.status()
 
     // KEYBOARD ACTIONS
     // Select only the actions we need
     // Using separate selectors to avoid unnecessary re-renders
-    const addLetter = useGameStore.use.addLetter();
-    const removeLetter = useGameStore.use.removeLetter();
-    const submitGuess = useGameStore.use.submitGuess();
+    const { addLetter, removeLetter, submitGuess } = useBoundStore.use.actions()
 
     // Unified handler for physical and virtual input
     const handleInput = (key: string) => {
@@ -25,17 +24,17 @@ export default function Keyboard() {
         if (status !== 'playing') return;
 
         if (key === 'Enter') submitGuess();
-        else if (key === 'Backspace') removeLetter();
-        else if (/^[A-Z]$/.test(key)) addLetter(key);
+        else if (key === 'Backspace') removeLetter()
+        else if (/^[A-Z]$/.test(key)) addLetter(key)
     };
 
     // Effect to handle physical keyboard input
 
     useEffect(() => {
         const onKeyDown = (e: KeyboardEvent) => {
-            const key = e.key.toUpperCase();
-            if (key === 'ENTER') handleInput('Enter');
-            else if (key === 'BACKSPACE') handleInput('Backspace');
+            const key = e.key.toUpperCase()
+            if (key === 'ENTER') handleInput('Enter')
+            else if (key === 'BACKSPACE') handleInput('Backspace')
             else if (/^[A-Z]$/.test(key)) handleInput(key);
         }
 
@@ -75,29 +74,9 @@ interface KeyProps {
 // The reduce logic runs everytime the board
 const Key = ({ keyLabel, onClick }: KeyProps) => {
 
-    const RANK = { correct: 3, present: 2, absent: 1, empty: 0 };
-
-    const status = useGameStore((state) => {
-        
-        const isGameOver = state.status === 'won' || state.status === 'lost';
-    
-        // If over, look at everything including the current row. 
-        // If playing, look at everything BEFORE the current row.
-        const rowsToCalculate = isGameOver ? state.currentRow + 1 : state.currentRow;
-
-        const submittedRows = state.board.slice(0, rowsToCalculate)
-        
-        const bestStatus = submittedRows
-                    .flat()
-                    .filter(tile => tile.letter === keyLabel)
-                    .reduce((bestSoFar, currentTile) => 
-                        (RANK[bestSoFar.status] > RANK[currentTile.status] 
-                            ? bestSoFar 
-                            : currentTile), 
-                        // If empty array reduce returns default object
-                        {letter: keyLabel, status: 'empty'})
-
-        return bestStatus.status
+    const status = useBoundStore((state) => {
+        const map = getKeyboardStatusMap(state)
+        return map[keyLabel] || 'empty' 
     })
 
     const getBgColor = (status: string) => {

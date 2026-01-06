@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { useGameStore } from './useGameStore';
+import React from 'react'
+import { useBoundStore } from './store/useBoundStore'
 
 /**
  * Q: Why are we use atomic subscriptions for each Tile AND memoizing the Row and Grid components?
@@ -15,13 +15,21 @@ import { useGameStore } from './useGameStore';
 
 // Grid component: the main entry point for the game board 
 // ------------------------------------------------------------------------
-const Grid = () => {
+export default function Grid() {
+
+    const board = useBoundStore((state) => state.board)
+
+    // GUARD: If the board hasn't been synced/created yet, return null
+    if (!board || board.length === 0) {
+        return <div className="grid-loading">Initializing Grid...</div>
+    }
 
     // We ask the store for the height of the board only to force re-render when the board changes
-    const rowCount = useGameStore.use.board().length
+    const rowCount = board.length
 
     return (
         <div className="grid">
+            <p>Debug: Session Active - {useBoundStore.use.activeSessionId()}</p>
             {/* We create an array of "Empty" slots just to map over them */}
             {Array.from({length: rowCount}).map((_, rowIndex) => (
                 <Row key={rowIndex} rowIndex={rowIndex} />
@@ -29,16 +37,12 @@ const Grid = () => {
         </div>
     )
 }
-
-// We memoize the Grid to prevent unnecessary re-renders when its parent re-renders
-export default React.memo(Grid)
-
 // Row component: the structure for each row of tiles
 // ------------------------------------------------------------------------
 
 // React.memo is a higher-order component that memoizes the result.
 const Row = React.memo(function Row({ rowIndex }: { rowIndex: number }) {
-    const wordLength = useGameStore.use.wordLength()
+    const wordLength = useBoundStore.use.wordLength()
 
     // Create a simple array of indexes: [0, 1, 2, 3, 4]
     const tileIndices = Array.from({ length: wordLength }, (_, i) => i);
@@ -53,8 +57,8 @@ const Row = React.memo(function Row({ rowIndex }: { rowIndex: number }) {
                 />
             ))}
         </div>
-    );
-});
+    )
+})
 
 // Tile component: atomic subscriber to its own state
 // ------------------------------------------------------------------------
@@ -63,7 +67,7 @@ const Tile = ({rowIndex, tileIndex}: {rowIndex: number, tileIndex: number}) => {
 
     // This hook creates a targeted subscription. 
     // This tile is now "ignorant" of the rest of the board.
-    const tile = useGameStore.use.board()[rowIndex][tileIndex] // Using auto-selector
+    const tile = useBoundStore((state) => state.board[rowIndex][tileIndex])
 
     const getStyles = (status: string, letter: string) => {
         switch (status) {
