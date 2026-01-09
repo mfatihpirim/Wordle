@@ -5,7 +5,7 @@ export default function Header() {
 
   const activeSessionId = useBoundStore.use.activeSessionId()
   const sessions = useBoundStore.use.sessions()
-  const { clearActiveSession, syncGameState } = useBoundStore.use.actions()
+  const { clearActiveSession, syncGameState, startNewGame } = useBoundStore.use.actions()
 
   const handleHomeClick = async () => {
     const currentSession = sessions.find(s => s.id === activeSessionId)
@@ -15,11 +15,26 @@ export default function Header() {
     }
   }
 
+  const handleShuffleClick = async () => {
+    clearActiveSession()
+    await startNewGame(false)
+  }
+
+  const tempShuffleButtonStyle = {
+    marginLeft: '10px',
+    padding: '0.5rem 1rem',
+    border: '1px solid #ccc',
+    borderRadius: '4px',
+    backgroundColor: '#f9f9f9',
+    cursor: 'pointer'
+  }
+
   return (
     <nav className="p-2 flex gap-2 border-b">
-      <Link to="/" onClick={handleHomeClick} className="[&.active]:font-bold">
-        Home
+      <Link to="/" onClick={handleHomeClick} >
+        Wordle
       </Link>
+      <button style={tempShuffleButtonStyle} onClick={handleShuffleClick}>Shuffle</button>
     </nav>
   )
 }

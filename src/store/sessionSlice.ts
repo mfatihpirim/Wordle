@@ -187,6 +187,7 @@ const syncGameState = async (set: SessionSet, get: SessionGet) => {
  */
 const applyHydration = (state: Draft<BoundState>, session: GameSession) => {
     state.secretWord = session.secretWord.toUpperCase()
+    console.log("Hey! don't look. the secret word is:", state.secretWord)
     state.status = session.status
     
     // Ensure board structure
@@ -259,6 +260,8 @@ const startNewGame = async (set: SessionSet, get: SessionGet, isFeatured: boolea
 
             applyHydration(state, newGameSession)
         })
+
+        refillQueue()
 
     } finally {
         // 🔓 Unlock: Always unlock, even if the fetch fails
