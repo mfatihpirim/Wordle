@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { useBoundStore } from './store/useBoundStore'
-import { getKeyboardStatusMap } from './store/gameSlice'
+import { useBoundStore } from '../store/useBoundStore'
+import { getKeyboardStatusMap } from '../store/gameSlice'
 
 const KEYS: string[][] = [
   ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],

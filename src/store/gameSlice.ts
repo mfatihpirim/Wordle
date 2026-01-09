@@ -1,5 +1,5 @@
 import {type StateCreator} from 'zustand'
-import { validateGuess } from '../wordManager'
+import { validateGuess } from '../data/wordManager'
 import { type Draft } from 'immer'
 import { type BoundState } from './useBoundStore'
 
@@ -11,7 +11,6 @@ export interface TileData {
 export interface GameState {
 
     // STATE (Live Game Data)  
-    wordLength: number
     board: TileData[][]
     currentRow: number
     status: 'playing' | 'won' | 'lost' | 'loading' | 'uninitialized' | 'error' | 'submitting'
@@ -32,23 +31,38 @@ export interface GameState {
 export type GameSet = (fn: (state: Draft<BoundState>) => void) => void
 export type GameGet = () => BoundState
 
-export const createEmptyBoard = (rows = 6, cols = 5): TileData[][] => {
-    return Array.from({ length: rows }, () =>
-        Array.from({ length: cols }, () => ({
-            letter: '',
-            // TypeScript now knows this 'empty' is the literal type 'empty'
-            status: 'empty' as const 
-        }))
-    )
+export const createEmptyBoard = (): TileData[][] => {
+    // Create a single row of 5 empty tiles
+    const createRow = () => Array.from({ length: 5 }, () => ({
+        letter: '',
+        status: 'empty' as const
+    }))
+
+    // Generate 5 unique rows
+    return Array.from({ length: 5 }, createRow)
 }
 
+/**
+ * Game slice factory for the zustand store.
+ *
+ * @remarks
+ * - Initializes game-related state (board, cursor, status, secret word, etc.).
+ * - Binds action handlers (addLetter, removeLetter, submitGuess) to the slice so
+ *   UI code can call state.actions.* without knowing implementation details.
+ * - Uses the immer middleware signature (Draft<BoundState>) to allow safe mutable
+ *   updates inside action handlers.
+ *
+ * Example usage:
+ * const slice = createGameSlice(set, get)
+ *
+ * @returns A configured GameState slice to merge into the global store.
+ */
 export const createGameSlice: StateCreator<
     BoundState,
     [["zustand/immer", never]],
     [],
     GameState
     > = (set, get) => ({
-        wordLength: 5,
         board: [],
         currentRow: 0,
         status: 'playing',
@@ -63,13 +77,24 @@ export const createGameSlice: StateCreator<
         }
 })
 
+/**
+ * Handle adding a letter to the current unsubmitted guess.
+ *
+ * @remarks
+ * Guards against non-playing states and overfilling the row. Updates the
+ * board tile at the current cursor and appends the letter to unsubmittedGuess.
+ *
+ * @param set - Store setter (immer Draft wrapper).
+ * @param get - Store getter.
+ * @param key - The letter to insert.
+ */
 const addLetter = (set: GameSet, get: GameGet, key: string) => {
 
     // Get the current state values (destructure for easier access)
-    const { currentRow,  wordLength, unsubmittedGuess, status } = get()
+    const { currentRow, unsubmittedGuess, status } = get()
 
     // 1. Guard Clauses
-    if (status !== 'playing' || unsubmittedGuess.length >= wordLength) return
+    if (status !== 'playing' || unsubmittedGuess.length >= 5) return
 
     // 2. Process Letter Addition
     set((state) => {
@@ -82,6 +107,16 @@ const addLetter = (set: GameSet, get: GameGet, key: string) => {
     })
 }
 
+/**
+ * Handle removing the last letter from the current unsubmitted guess.
+ *
+ * @remarks
+ * Guards against non-playing states and when there is no letters to remove. 
+ * Clears the last tile on the board row and shortens the unsubmittedGuess string.
+ *
+ * @param set - Store setter (immer Draft wrapper).
+ * @param get - Store getter.
+ */
 const removeLetter = (set: GameSet, get: GameGet) => {
 
     const { unsubmittedGuess, status } = get()
@@ -102,12 +137,33 @@ const removeLetter = (set: GameSet, get: GameGet) => {
     })
 }
 
+/**
+ * Submit the current unsubmitted guess and advance the game state.
+ *
+ * @remarks
+ * Lifecycle and side-effects:
+ * 1. Guard — returns early unless in 'playing' and the guess length equals 5.
+ * 2. UI state — sets status = 'submitting' to signal validation in progress.
+ * 3. Validation — awaits validateGuess(guess). If invalid, reverts status and aborts.
+ * 4. Apply changes — on success, applyGuessToBoard writes tile colors and records the guess.
+ * 5. Outcome — determineGameOutcome updates status/currentRow and clears unsubmittedGuess.
+ * 6. Session sync — after sync, if an activeSessionId exists, pushes the new board/status
+ *    into persistent session history via actions.updateSession.
+ *
+ * Important:
+ * - Validation runs before any board mutation so invalid words do not flip tiles.
+ * - The function intentionally separates async validation from synchronous mutations so
+ *   UI can reflect a submitting state.
+ *
+ * @param set - Store setter (immer Draft wrapper).
+ * @param get - Store getter.
+ */
 const submitGuess = async (set: GameSet, get: GameGet) => {
 
-    const { status, unsubmittedGuess, wordLength } = get()
+    const { status, unsubmittedGuess } = get()
 
     // 1. Guard Clauses
-    if (status !== 'playing' || unsubmittedGuess.length < wordLength) return
+    if (status !== 'playing' || unsubmittedGuess.length < 5) return
 
     // 2. Async Validation
     set((state) => { state.status = 'submitting' })
@@ -135,6 +191,18 @@ const submitGuess = async (set: GameSet, get: GameGet) => {
     }
 }
 
+/**
+ * Compute tile statuses (correct/present/absent) for a guess against the secret.
+ *
+ * @remarks
+ * Performs a two-pass algorithm: first mark 'correct' tiles and decrement a
+ * pouch tally for matched letters, then mark 'present' where letters exist in
+ * the pouch. Returns a status per position matching the secret's length.
+ *
+ * @param guess - The player's guess string.
+ * @param secretWord - The secret word to compare against.
+ * @returns An array of TileData.status values for each letter.
+ */
 const getTileStatuses = (guess: string, secretWord: string): TileData['status'][] => {
     
     guess = guess
@@ -184,6 +252,26 @@ const RANK: Record<string, number> = {
     empty: 0 
 }
 // Runs every time the store changes, but it only updates the UI (triggers a re-render) when a row is actually submitted
+/**
+ * Produce a keyboard status map aggregated from submitted rows.
+ *
+ * @remarks
+ * Purpose:
+ * - Builds a map letter -> best-seen status used to color the on-screen keyboard.
+ *
+ * finishedRowsCount behavior:
+ * - While playing: only include fully submitted rows (rows BEFORE currentRow).
+ *   The row at currentRow is still being edited and must not influence keyboard colors.
+ * - After game over (won|lost): include the currentRow as well (finishedRowsCount = currentRow + 1)
+ *   because that final submission should be reflected on the keyboard.
+ *
+ * Precedence & RANK:
+ * - When multiple submissions mention the same letter, the RANK table (correct > present > absent > empty)
+ *   decides which status wins. A later stronger status upgrades earlier weaker ones.
+ *
+ * @param state - The current BoundState.
+ * @returns A record mapping letter -> status string for keyboard coloring.
+ */
 export const getKeyboardStatusMap = (state: BoundState) => {
 
     // This object will store our final result: { 'A': 'correct', 'B': 'absent', ... }
@@ -222,6 +310,15 @@ export const getKeyboardStatusMap = (state: BoundState) => {
     return statusMap
 }
 
+/**
+ * Apply the result of the current guess to the board tiles and record the guess.
+ *
+ * @remarks
+ * Uses getTileStatuses to compute per-tile statuses, writes statuses/letters
+ * into the current row, and appends the guess to the guesses history.
+ *
+ * @param state - Immer Draft of the BoundState to mutate.
+ */
 const applyGuessToBoard = (state: Draft<BoundState>) => {
 
     const guess = state.unsubmittedGuess
@@ -239,6 +336,16 @@ const applyGuessToBoard = (state: Draft<BoundState>) => {
     
 }
 
+/**
+ * Determine whether the game has been won, lost, or should continue.
+ *
+ * @remarks
+ * Compares the last submitted guess to the secret word and checks for the
+ * final row. Updates state.status accordingly and advances the currentRow
+ * when the game continues. Clears unsubmittedGuess after processing.
+ *
+ * @param state - Immer Draft of the BoundState to mutate.
+ */
 const determineGameOutcome = (state: Draft<BoundState>) => {
     
     const lastGuess = state.unsubmittedGuess
@@ -255,6 +362,4 @@ const determineGameOutcome = (state: Draft<BoundState>) => {
     }
 
     state.unsubmittedGuess = ''
-
-    
 }

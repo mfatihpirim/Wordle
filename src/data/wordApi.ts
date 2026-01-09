@@ -1,5 +1,8 @@
 import { z } from 'zod'
-import { queryClient } from './queryClient'
+import { queryClient } from '../queryClient'
+
+// quick access for testing:
+// https://api.datamuse.com/words?sp=${word}&md=dpsrf&max=1
 
 /**
  * Default HTTP fetcher used by the module.
@@ -50,6 +53,16 @@ const DatamuseWordSchema = z.object({
     defs: z.array(z.string()).default([]),
 })
 
+const WordResponseSchema = z.object({
+  word: z.string(),
+  length: z.number(),
+  category: z.string(),
+  language: z.string()
+})
+
+// 2. Define the schema for the array of these objects
+const RandomWordsArraySchema = z.array(WordResponseSchema)
+
 /**
  * Zod schema for the array response from Datamuse.
  *
@@ -96,28 +109,26 @@ export const wordApi = {
      * @returns A promise resolving to an array of Datamuse word objects (validated).
      */
     fetchDatamuseData: async (word: string) => {
-        const url = `https://api.datamuse.com/words?sp=${word.toLowerCase()}&md=dpsrf&max=1`;
+        const url = `https://api.datamuse.com/words?sp=${word.toLowerCase()}&md=dpsrf&max=1`
         // TypeScript is very strict with unknown. It won't let you do anything with rawData 
         // (like rawData[0].word) because it doesn't know if rawData is even an object.
-        const rawData = await _fetcher<unknown>(url);
+        const rawData = await _fetcher<unknown>(url)
         // Validate at the border!
-        return DatamuseArraySchema.parse(rawData);
+        return DatamuseArraySchema.parse(rawData)
     },
 
-    /**
-     * Fetches a random word of the requested length from the random-word API.
-     *
-     * @remarks
-     * The remote endpoint returns a string array; this function returns the first
-     * element and does not perform additional schema validation.
-     *
-     * @param length - Desired length of the random word.
-     * @returns A promise resolving to the chosen random word string.
-     */
-    fetchRandomWord: async (length: number) => {
-        const url = `https://random-word-api.herokuapp.com/word?length=${length}`
+    fetchRandomWords: async (noOfWords: number = 10) => {
+        const url = `https://random-words-api.kushcreates.com/api?language=en&category=wordle&length=5&type=lowercase&words=${noOfWords}`
         const rawData = await _fetcher<string[]>(url)
-        return rawData[0] // No Zod needed here as it's a simple string array
+
+        if (rawData === null) {
+            console.warn(`API returned null for URL: ${url}`)
+            return []
+        }
+
+        const validatedData = RandomWordsArraySchema.parse(rawData)
+        const words = validatedData.map(item => item.word)
+        return words
     },
 
     /**
@@ -186,8 +197,3 @@ export const wordApi = {
         })
     }
 }
-
-
-
-
-

@@ -1,6 +1,6 @@
 
 import React from 'react'
-import { useBoundStore } from './store/useBoundStore'
+import { useBoundStore } from '../store/useBoundStore'
 
 /**
  * Q: Why are we use atomic subscriptions for each Tile AND memoizing the Row and Grid components?
@@ -18,18 +18,20 @@ import { useBoundStore } from './store/useBoundStore'
 export default function Grid() {
 
     const board = useBoundStore((state) => state.board)
-
+    const activeSessionId = useBoundStore.use.activeSessionId()
+    
     // GUARD: If the board hasn't been synced/created yet, return null
     if (!board || board.length === 0) {
-        return <div className="grid-loading">Initializing Grid...</div>
+        return <div className="grid-loading">Grid.tsx: !board OR board.length === 0.</div>
     }
 
     // We ask the store for the height of the board only to force re-render when the board changes
     const rowCount = board.length
+    
 
     return (
         <div className="grid">
-            <p>Debug: Session Active - {useBoundStore.use.activeSessionId()}</p>
+            <p>Active Session ID: {activeSessionId}</p>
             {/* We create an array of "Empty" slots just to map over them */}
             {Array.from({length: rowCount}).map((_, rowIndex) => (
                 <Row key={rowIndex} rowIndex={rowIndex} />
@@ -42,7 +44,7 @@ export default function Grid() {
 
 // React.memo is a higher-order component that memoizes the result.
 const Row = React.memo(function Row({ rowIndex }: { rowIndex: number }) {
-    const wordLength = useBoundStore.use.wordLength()
+    const wordLength = 5
 
     // Create a simple array of indexes: [0, 1, 2, 3, 4]
     const tileIndices = Array.from({ length: wordLength }, (_, i) => i);

@@ -23,7 +23,8 @@ export function isLowQuality(profile: WordProfile): boolean {
 
     const bannedKeywords = [
         'dated', 'archaic', 'obsolete', 'rare', 'slang', 
-        'surname', 'dialect', 'scientific', 'latin', 'prefix', 'suffix'
+        'surname', 'dialect', 'scientific', 'latin', 'prefix', 'suffix',
+        'biblical', 'given name'
     ]
 
     // Build the master regex once
@@ -104,12 +105,12 @@ export async function isRoot(profile: WordProfile): Promise<boolean> {
 
     // 1. word is root if word length less than 3
     // 2. word is root if it ends with 'ss'
-    if(word.length < 3 || word.endsWith('ss')) return true
+    if(word.endsWith('SS')) return true
     
     const suffixMap = {
-        's':  [word.slice(0, -1)],
-        'ed': [word.slice(0, -2), word.slice(0, -2) + 'e']
-    };
+        'S':  [word.slice(0, -1)],
+        'ED': [word.slice(0, -2), word.slice(0, -2) + 'E']
+    }
 
     for (const suffix in suffixMap) {
         if (word.endsWith(suffix)) {
@@ -119,10 +120,9 @@ export async function isRoot(profile: WordProfile): Promise<boolean> {
             for (const root of candidates) {
                 const rootFreq = (await wordApi.fetchProfile(root)).frequency
                 
-                // word is not a root if: the derived word from it IS a root and is more frequent than it
+                // if the given word is "pants", it is technically not a root
+                // but since pant.freq !> pants.freq we still return true (pants is considered a root)
                 
-                // edge case: if the derived word does not exist, its freq will be 0
-                // and the true will be returned by default
                 if (rootFreq > profile.frequency) return false
             }
         }
@@ -145,3 +145,4 @@ export function isClean(profile: WordProfile): boolean {
     const { word } = profile
     return !filter.isProfane(word.toLocaleLowerCase())
 }
+

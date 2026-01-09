@@ -31,13 +31,20 @@ const useBoundStoreBase = create<BoundState>()(
             storage: createJSONStorage(() => localStorage),
             // Do not persist actions
             partialize: (state) => {
-                const { actions, ...rest } = state
+                const { 
+                    actions, 
+                    hasInitialized, 
+                    isGeneratingGame, 
+                    unsubmittedGuess, // Clear the current typing buffer
+                    // status, // Only exclude this if your gameSlice 'status' is used for animations
+                    ...rest 
+                } = state
                 return rest
             },
             onRehydrateStorage: () => (state) => {
                 if (state) {
-                    state.actions.initialize();
-                    console.log("🔄 PERSIST LOADED", state?.sessions.length)
+                    state.actions.initialize()
+                    // console.log("🔄 PERSIST LOADED", state?.sessions.length)
                 }
             },
         }
