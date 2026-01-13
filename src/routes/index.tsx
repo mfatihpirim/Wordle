@@ -19,11 +19,18 @@ function Home() {
   // A game is NEW if the very first tile of the first row is still empty
   // If row 0, tile 0 has no letter, no one has even typed a character yet.
   const isNewGame = !currentSession || currentSession.board[0][0].letter === ''
-  
+
   // Initialization occurs in the background as the persisted storage loads
   if (!hasInitialized) {
     return <div className="flex justify-center p-10">Loading Wordle...</div>
   }
+
+  const formattedDate = new Date().toLocaleDateString('en-US', { 
+    month: 'long', 
+    day: 'numeric', 
+    year: 'numeric' 
+  })
+  const formattedLength = sessions.length.toString().padStart(4, '0')
 
   // px-[clamp(68px,42vw-97px,628px)]
   return (
@@ -42,25 +49,25 @@ function Home() {
       {/* PROMPT & ACTION BUTTONS  */}
       {isNewGame
         ? <>
-            <p className='text-2xl md:text-[40px] font-msft text-center mt-2 sm:mt-4'>
+            <p className='text-2xl md:text-[40px] font-msft text-center mt-2 md:mt-4'>
               Get 6 chances to guess <br /> a 5-letter word
               </p>
             {/* BUTTONS */}
-            <div className ='inline-flex flex-col items-center sm:flex-row sm:justify-center gap-x-2 mt-12 gap-y-2'>
-              <Link to="/game" className="btn-primary sm:order-3">
+            <div className ='inline-flex flex-col items-center md:flex-row md:justify-center gap-x-2 mt-12 gap-y-2'>
+              <Link to="/game" className="btn-primary md:order-3">
                 <Button>Play</Button>
               </Link>
-              <Button variant="outline" className='sm:order-1'>Subscribe </Button>
-              <Button variant="outline" className='sm:order-2'>Log in</Button>
+              <Button disabled variant="outline" className='md:order-1'>Subscribe </Button>
+              <Button disabled variant="outline" className='md:order-2'>Log in</Button>
             </div>
           </>
         : <>
-            <p className='text-2xl md:text-[40px] font-msft text-center mt-2 sm:mt-4'>
+            <p className='text-2xl md:text-[40px] font-msft text-center mt-2 md:mt-4'>
                   {`You've made ${currentRow} of 6`}
                   <br />
                   guesses. Keep it up!
                 </p>
-            <div className="inline-flex flex-col items-center sm:flex-row sm:justify-center gap-x-2 mt-12 gap-y-2">
+            <div className="inline-flex flex-col items-center md:flex-row md:justify-center gap-x-2 mt-12 gap-y-2">
               <Link to="/game" className="btn-primary">
                 <Button>Continue</Button>
               </Link>
@@ -71,8 +78,8 @@ function Home() {
 
       {/* META TEXT */}
       <div className='text-center text-foreground mt-32 md:mt-14'>
-        <p className='font-msft'>December 16, 2025</p>
-        <p className='font-sans'>No. 1641</p>
+        <p className='font-msft'>{formattedDate}</p>
+        <p className='font-sans'>No. {formattedLength}</p>
         <p className='font-sans'>Edited by Fatih Pirim</p>
       </div>
     </div>
