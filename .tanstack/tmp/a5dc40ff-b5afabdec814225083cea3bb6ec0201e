@@ -9,11 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as GameRouteImport } from './routes/game'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as PathlessLayoutRouteImport } from './routes/_pathlessLayout'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as PathlessLayoutGameRouteImport } from './routes/_pathlessLayout.game'
 
+const GameRoute = GameRouteImport.update({
+  id: '/game',
+  path: '/game',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
@@ -28,45 +33,48 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PathlessLayoutGameRoute = PathlessLayoutGameRouteImport.update({
-  id: '/game',
-  path: '/game',
-  getParentRoute: () => PathlessLayoutRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
-  '/game': typeof PathlessLayoutGameRoute
+  '/game': typeof GameRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
-  '/game': typeof PathlessLayoutGameRoute
+  '/game': typeof GameRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/_pathlessLayout': typeof PathlessLayoutRouteWithChildren
+  '/_pathlessLayout': typeof PathlessLayoutRoute
   '/about': typeof AboutRoute
-  '/_pathlessLayout/game': typeof PathlessLayoutGameRoute
+  '/game': typeof GameRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths: '/' | '/about' | '/game'
   fileRoutesByTo: FileRoutesByTo
   to: '/' | '/about' | '/game'
-  id: '__root__' | '/' | '/_pathlessLayout' | '/about' | '/_pathlessLayout/game'
+  id: '__root__' | '/' | '/_pathlessLayout' | '/about' | '/game'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  PathlessLayoutRoute: typeof PathlessLayoutRouteWithChildren
+  PathlessLayoutRoute: typeof PathlessLayoutRoute
   AboutRoute: typeof AboutRoute
+  GameRoute: typeof GameRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/game': {
+      id: '/game'
+      path: '/game'
+      fullPath: '/game'
+      preLoaderRoute: typeof GameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/about': {
       id: '/about'
       path: '/about'
@@ -88,32 +96,14 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_pathlessLayout/game': {
-      id: '/_pathlessLayout/game'
-      path: '/game'
-      fullPath: '/game'
-      preLoaderRoute: typeof PathlessLayoutGameRouteImport
-      parentRoute: typeof PathlessLayoutRoute
-    }
   }
 }
 
-interface PathlessLayoutRouteChildren {
-  PathlessLayoutGameRoute: typeof PathlessLayoutGameRoute
-}
-
-const PathlessLayoutRouteChildren: PathlessLayoutRouteChildren = {
-  PathlessLayoutGameRoute: PathlessLayoutGameRoute,
-}
-
-const PathlessLayoutRouteWithChildren = PathlessLayoutRoute._addFileChildren(
-  PathlessLayoutRouteChildren,
-)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  PathlessLayoutRoute: PathlessLayoutRouteWithChildren,
+  PathlessLayoutRoute: PathlessLayoutRoute,
   AboutRoute: AboutRoute,
+  GameRoute: GameRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

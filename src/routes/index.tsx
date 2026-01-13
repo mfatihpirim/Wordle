@@ -1,5 +1,8 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useBoundStore } from '../store/useBoundStore';
+import { Button } from '@/components/ui/button'
+import WordleIcon from '../assets/wordle_icon.svg?react'
+import WordleIconDark from '../assets/wordle_icon_dark.svg?react'
 
 export const Route = createFileRoute('/')({
   component: Home,
@@ -11,31 +14,67 @@ function Home() {
   const hasInitialized = useBoundStore.use.hasInitialized()
   const sessions = useBoundStore.use.sessions()
   const currentSession = sessions.find(s => s.id === activeSessionId)
+  const currentRow = useBoundStore.use.currentRow()
 
   // A game is NEW if the very first tile of the first row is still empty
   // If row 0, tile 0 has no letter, no one has even typed a character yet.
   const isNewGame = !currentSession || currentSession.board[0][0].letter === ''
-
-  // 3 renders happen here, as you may see in console.log
-  // Render 1: App is empty.
-  // Render 2: App is busy fetching your word.
-  // Render 3: App is ready to play.
-  // https://docs.google.com/document/d/1Y5f--TW27_lHoSi7hJqrwnV4wI1n8G2wjErmVbruGSc/edit?usp=sharing
-  // console.log("Home Render - hasInitialized:", hasInitialized)
   
   // Initialization occurs in the background as the persisted storage loads
   if (!hasInitialized) {
     return <div className="flex justify-center p-10">Loading Wordle...</div>
   }
 
+  // px-[clamp(68px,42vw-97px,628px)]
   return (
-    <div className="home-screen">
-      <h1>Wordle</h1>
+
+    <div className='flex flex-col items-center px-17 py-32 min-h-screen w-full bg-home transition-colors duration-500 justify-center'>
+
+      {/* ICON */}
+      <div className='flex justify-center-safe'>
+          <WordleIcon className="dark:hidden size-16 md:size-20" />
+          <WordleIconDark className="hidden dark:block size-16 md:size-20" />
+      </div>
       
-      {/* If activeSessionId is set, it's a resume. If null, it's a fresh play. */}
-      <Link to="/game" className="btn-primary">
-        {isNewGame ? 'Play Game' : 'Resume Game'}
-      </Link>
+      {/* TITLE */}
+      <h1 className="text-5xl font-nytkarnak font-bold text-foreground text-center mt-4">Wordle</h1>
+
+      {/* PROMPT & ACTION BUTTONS  */}
+      {isNewGame
+        ? <>
+            <p className='text-2xl md:text-[40px] font-msft text-center mt-2 sm:mt-4'>
+              Get 6 chances to guess <br /> a 5-letter word
+              </p>
+            {/* BUTTONS */}
+            <div className ='inline-flex flex-col items-center sm:flex-row sm:justify-center gap-x-2 mt-12 gap-y-2'>
+              <Link to="/game" className="btn-primary sm:order-3">
+                <Button>Play</Button>
+              </Link>
+              <Button variant="outline" className='sm:order-1'>Subscribe </Button>
+              <Button variant="outline" className='sm:order-2'>Log in</Button>
+            </div>
+          </>
+        : <>
+            <p className='text-2xl md:text-[40px] font-msft text-center mt-2 sm:mt-4'>
+                  {`You've made ${currentRow} of 6`}
+                  <br />
+                  guesses. Keep it up!
+                </p>
+            <div className="inline-flex flex-col items-center sm:flex-row sm:justify-center gap-x-2 mt-12 gap-y-2">
+              <Link to="/game" className="btn-primary">
+                <Button>Continue</Button>
+              </Link>
+            </div>
+ 
+          </>
+      }
+
+      {/* META TEXT */}
+      <div className='text-center text-foreground mt-32 md:mt-14'>
+        <p className='font-msft'>December 16, 2025</p>
+        <p className='font-sans'>No. 1641</p>
+        <p className='font-sans'>Edited by Fatih Pirim</p>
+      </div>
     </div>
   )
 }

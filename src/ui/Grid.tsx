@@ -93,7 +93,7 @@ const Tile = ({rowIndex, tileIndex}: {rowIndex: number, tileIndex: number}) => {
     const styles = getStyles(tile.status, tile.letter)
     
     return (
-        <div 
+        <div
             // className="tile" 
             style={{
                 border: `2px solid ${styles.border}`,
